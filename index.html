@@ -165,7 +165,39 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica N
   <button class="btn-sync" id="btn-manual-sync" style="display:none;">同步</button>
 </div>
 
-<!-- 旅行列表頁（首頁） -->
+<!-- 匯入旅行 Modal -->
+<div id="modal-import" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.45);z-index:999;align-items:flex-end;justify-content:center;">
+  <div style="background:#fff;border-radius:18px 18px 0 0;padding:20px 16px 32px;width:100%;max-width:560px;">
+    <div style="font-size:16px;font-weight:700;margin-bottom:4px;">用旅行代碼加入旅行</div>
+    <div style="font-size:12px;color:#888;margin-bottom:14px;">輸入旅行發起人提供的旅行代碼，APP 會從雲端讀取旅行資料並加入你的列表。</div>
+    <div class="field">
+      <label>旅行代碼（Gist ID）</label>
+      <input id="import-gist-id" type="text" placeholder="例：bb4ba55ed7a6fda2e37c30465c5441ed">
+    </div>
+    <div style="font-size:11px;color:#888;margin-bottom:12px;">請確認已在設定頁填入 Token，否則無法讀取旅行資料。</div>
+    <div id="import-status" style="font-size:12px;margin-bottom:10px;display:none;"></div>
+    <button class="btn-primary" id="btn-modal-import" style="margin-bottom:8px;">讀取並匯入</button>
+    <button class="btn-secondary" id="btn-modal-import-cancel" style="width:100%;text-align:center;">取消</button>
+  </div>
+</div>
+
+<!-- Gist 設定 Modal -->
+<div id="modal-gist" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.45);z-index:999;align-items:flex-end;justify-content:center;">
+  <div style="background:#fff;border-radius:18px 18px 0 0;padding:20px 16px 32px;width:100%;max-width:560px;">
+    <div style="font-size:16px;font-weight:700;margin-bottom:4px;" id="modal-gist-title">設定旅行同步 Gist</div>
+    <div style="font-size:12px;color:#888;margin-bottom:14px;">填入這趟旅行的旅行代碼（Gist ID），不同旅行使用不同代碼，可控制誰能存取哪趟旅行的資料。</div>
+    <div class="field">
+      <label>Gist ID</label>
+      <input id="modal-gist-id" type="text" placeholder="例：bb4ba55ed7a6fda2e37c30465c5441ed">
+    </div>
+    <div style="font-size:11px;color:#185FA5;margin-bottom:12px;">旅行代碼由旅行發起人使用 GitHub 設定小幫手建立，或自行在 GitHub 上建立 Gist 取得。</div>
+    <button class="btn-primary" id="btn-modal-save-gist" style="margin-bottom:8px;">儲存並立即同步</button>
+    <button class="btn-secondary" id="btn-modal-clear-gist" style="width:100%;text-align:center;margin-bottom:8px;">清除 Gist（改回單機模式）</button>
+    <button class="btn-secondary" id="btn-modal-cancel" style="width:100%;text-align:center;">取消</button>
+  </div>
+</div>
+
+<!-- 旅行列表頁 -->
 <div id="screen-trips" class="screen">
   <div class="topbar">
     <div class="topbar-row">
@@ -174,8 +206,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica N
     </div>
   </div>
   <div id="trip-list" style="padding:12px;"></div>
-  <div style="padding:0 12px 12px;">
+  <div style="padding:0 12px 12px;display:flex;flex-direction:column;gap:8px;">
     <button class="btn-primary" id="btn-add-new-trip">＋ 新增旅行</button>
+    <button class="btn-secondary" id="btn-import-trip" style="text-align:center;">☁️ 用旅行代碼加入旅行</button>
   </div>
 </div>
 
@@ -184,22 +217,21 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica N
   <div class="topbar">
     <div class="topbar-row">
       <button class="btn-back" id="btn-cloud-back">← 返回</button>
-      <h1>雲端同步設定</h1>
+      <h1>同步設定</h1>
       <div style="width:48px"></div>
     </div>
   </div>
   <div class="cloud-section">
-    <div class="section-label">GitHub Gist 同步</div>
-    <div class="field"><label>Gist ID</label><input id="cloud-gist-id" type="text" placeholder="例：bb4ba55ed7a6fda2e37c30465c5441ed"></div>
+    <div class="section-label">全域 Token 設定</div>
+    <div style="font-size:12px;color:#185FA5;margin-bottom:8px;line-height:1.5;">Token 是你的 GitHub 身分鑰匙，填一次後所有旅行都能使用。每趟旅行再各自設定 Gist ID 即可。</div>
     <div class="field"><label>Personal Access Token</label><input id="cloud-token" type="password" placeholder="ghp_..."></div>
-    <div class="cloud-hint">⚠️ Token 只存在你的裝置上，不會傳給任何人。<br>設定後所有裝置打開此APP都會自動同步同一份資料。</div>
-    <button class="btn-primary" id="btn-save-cloud" style="margin-top:12px;">儲存設定並立即同步</button>
-    <button class="btn-secondary" id="btn-clear-cloud" style="width:100%;margin-top:8px;text-align:center;">清除雲端設定（改回本機模式）</button>
+    <button class="btn-primary" id="btn-save-global-token" style="margin-top:8px;">儲存 Token</button>
+    <button class="btn-secondary" id="btn-clear-cloud" style="width:100%;margin-top:8px;text-align:center;">清除 Token（所有旅行停止同步）</button>
   </div>
   <div class="sheets-section">
     <div class="section-label">Google 試算表回填設定</div>
     <div class="field"><label>Apps Script 網址</label><input id="cloud-script-url" type="text" placeholder="https://script.google.com/macros/s/..."></div>
-    <div class="cloud-hint">完成 Apps Script 部署後將網址貼在此處。<br>回填功能在「結算」頁面的「回填試算表」按鈕執行。</div>
+    <div style="font-size:11px;color:#185FA5;margin-top:4px;">完成 Apps Script 部署後將網址貼在此處。</div>
     <button class="btn-primary" id="btn-save-script" style="margin-top:12px;background:#085041;">儲存 Script 網址</button>
   </div>
 </div>
@@ -214,7 +246,13 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica N
     <p id="setup-subtitle">填寫基本資料後即可開始記帳</p>
   </div>
   <div class="section">
-    <div class="section-label">旅行資訊</div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+      <div class="section-label" style="margin-bottom:0;">旅行資訊</div>
+      <div style="display:flex;align-items:center;gap:6px;">
+        <label style="font-size:11px;color:#888;">建立人</label>
+        <input id="s-creator" type="text" placeholder="必填" style="width:80px;border:1px solid #E0E0E0;border-radius:6px;padding:4px 8px;font-size:12px;font-family:inherit;background:#FAFAFA;outline:none;">
+      </div>
+    </div>
     <div class="field" id="f-s-name"><label>旅行名稱</label><input id="s-name" type="text" placeholder="例：2025 日本關西自由行"></div>
     <div class="field"><label>目的地</label><input id="s-dest" type="text" placeholder="例：大阪、京都、神戶"></div>
     <div class="row2">
@@ -237,14 +275,22 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica N
   <div class="topbar">
     <div class="topbar-row">
       <div><h1 id="list-title">旅行記帳</h1><p id="list-sub">共 0 筆消費</p></div>
-      <button class="btn-secondary" id="btn-go-settle" style="font-size:13px;padding:7px 12px;">結算</button>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <span id="list-dest" style="font-size:12px;color:#333;"></span>
+        <button class="btn-secondary" id="btn-go-settle" style="font-size:13px;padding:7px 12px;">結算</button>
+      </div>
     </div>
   </div>
   <div class="trip-title-bar">
-    <div class="trip-name-link" id="btn-edit-trip" title="點擊編輯旅行資訊"><span id="list-tripname"></span><span style="font-size:14px;">✏️</span></div>
-    <div class="trip-edit-hint">點項目可編輯・垃圾桶按兩次確認刪除・<span id="btn-back-to-trips" style="color:#185FA5;cursor:pointer;text-decoration:underline;">切換旅行</span></div>
-    <div class="trip-dates" id="list-dates"></div>
-    <span class="day-badge" id="list-day"></span>
+    <div style="display:flex;align-items:center;justify-content:flex-end;gap:12px;">
+      <span id="btn-edit-trip" title="編輯旅行資訊" style="cursor:pointer;font-size:13px;color:#185FA5;display:inline-flex;align-items:center;gap:3px;">✏️ 編輯旅行</span>
+      <span id="btn-back-to-trips" style="cursor:pointer;font-size:13px;color:#185FA5;display:inline-flex;align-items:center;gap:3px;">🔄 切換旅行</span>
+    </div>
+    <div style="font-size:12px;color:#666;margin-top:4px;display:flex;align-items:center;gap:8px;">
+      <span id="list-dates"></span>
+      <span id="list-day" style="color:#888;"></span>
+    </div>
+    <div style="font-size:11px;color:#888;margin-top:2px;">點項目可編輯・垃圾桶按兩次確認刪除</div>
   </div>
   <div id="expense-list" class="expense-list"></div>
   <div id="empty-state" class="empty-state"><div style="font-size:40px;margin-bottom:12px;">🧾</div><p>還沒有消費紀錄<br>點右下角 + 新增第一筆</p></div>
@@ -608,6 +654,7 @@ function initSetupPage(editMode){
     document.getElementById('s-dest').value=state.trip.dest||'';
     document.getElementById('s-start').value=state.trip.start||'';
     document.getElementById('s-end').value=state.trip.end||'';
+    document.getElementById('s-creator').value=state.trip.creator||'';
     MEM_IDS.forEach(function(m){var member=state.trip.members.find(function(x){return x.id===m;});var el=document.getElementById('m-'+m);if(el)el.value=member?member.name:'';});
     var customCodes=state.trip.currencies.filter(function(c){return !FIXED_CURRENCIES.some(function(f){return f.code===c;});});
     var presetCustom=customCodes.map(function(c){return {code:c,checked:true};});
@@ -620,7 +667,26 @@ function initSetupPage(editMode){
     var today=new Date().toISOString().slice(0,10);
     document.getElementById('s-start').value=today;
     document.getElementById('s-end').value=today;
+    document.getElementById('s-creator').value='';
     renderCurrencyGrid(null);
+    // 預帶第一位成員名稱到建立人欄位，並監聽同步更新
+    var mAInput=document.getElementById('m-A');
+    var creatorInput=document.getElementById('s-creator');
+    if(mAInput && creatorInput){
+      creatorInput.value=mAInput.value.trim();
+      mAInput._creatorSync=function(){
+        // 只有在建立人欄位仍等於第一位成員名稱時才跟著更新（避免覆蓋手動修改）
+        if(creatorInput.value==='' || creatorInput._synced){
+          creatorInput.value=mAInput.value.trim();
+          creatorInput._synced=true;
+        }
+      };
+      mAInput.addEventListener('input', mAInput._creatorSync);
+      creatorInput.addEventListener('input', function(){
+        // 使用者手動修改建立人後停止同步
+        creatorInput._synced=false;
+      });
+    }
   }
 }
 function goEditTrip(){initSetupPage(true);showScreen('setup');}
@@ -644,10 +710,12 @@ function saveTrip(){
   var name=document.getElementById('s-name').value.trim();
   var start=document.getElementById('s-start').value;
   var end=document.getElementById('s-end').value;
+  var creator=document.getElementById('s-creator').value.trim();
   var missing=[];
   if(!name){missing.push('旅行名稱');markInvalid('f-s-name');}
   if(!start){missing.push('出發日期');markInvalid('f-s-start');}
   if(!end){missing.push('回程日期');markInvalid('f-s-end');}
+  if(!creator){missing.push('旅行建立人');}
   var members=MEM_IDS.filter(function(m){return document.getElementById('m-'+m).value.trim()!=='';}).map(function(m){return {id:m,name:document.getElementById('m-'+m).value.trim()};});
   if(members.length<1){missing.push('成員名稱（至少一位）');}
   if(missing.length>0){
@@ -656,16 +724,52 @@ function saveTrip(){
     return;
   }
   var currencies=collectCurrencies();
-  var newTrip={name:name,dest:document.getElementById('s-dest').value.trim(),start:start,end:end,members:members,currencies:currencies,tripUpdatedAt:Date.now()};
-  if(state.editingTrip&&state.trip){
+  var newTrip={name:name,dest:document.getElementById('s-dest').value.trim(),start:start,end:end,members:members,currencies:currencies,creator:creator,tripUpdatedAt:Date.now()};
+  var isNew=!(state.editingTrip&&state.trip);
+  if(!isNew){
     state.trip=newTrip;
     state.expenses=state.expenses.map(function(e){return Object.assign({},e,{day:calcDay(e.date)});});
   } else {
     state.trip=newTrip; state.expenses=[];
   }
   clearUndoBuffer();
-  saveToStorageAndSync();
+  saveToStorage();
   showScreen('list'); renderList(); state.editingTrip=false;
+
+  // 新增旅行時自動建立 Gist（有 Token 才執行）
+  if(isNew && getGlobalToken() && state.currentTripId){
+    autoCreateGist(state.currentTripId, newTrip);
+  } else {
+    saveToStorageAndSync();
+  }
+}
+
+async function autoCreateGist(tripId, trip){
+  var token=getGlobalToken();
+  if(!token) return;
+  // 產生描述：出發日期旅行名稱_建立人
+  var dateStr=(trip.start||'').replace(/-/g,'');
+  var desc=dateStr+trip.name+(trip.creator?('_'+trip.creator):'');
+  try{
+    var resp=await fetch('https://api.github.com/gists',{
+      method:'POST',
+      headers:{'Authorization':'Bearer '+token,'Accept':'application/vnd.github+json','Content-Type':'application/json'},
+      body:JSON.stringify({description:desc,public:false,files:{'travel_data.json':{content:'{}'}}})
+    });
+    var data=await resp.json();
+    if(resp.ok){
+      setTripGistId(tripId, data.id);
+      saveToStorage();
+      renderTripList();
+      setSyncStatus('✓ 旅行代碼已自動建立','ok');
+      // 立即同步旅行資料到新 Gist
+      await syncToCloud(false, tripId);
+    } else {
+      setSyncStatus('⚠ 旅行代碼建立失敗（可手動設定）','err');
+    }
+  }catch(e){
+    setSyncStatus('⚠ 旅行代碼建立失敗（可手動設定）','err');
+  }
 }
 
 function onCurrencyOrPaymentChange(){
@@ -1097,11 +1201,13 @@ function moveExpense(id, dir){
 function renderList(){
   if(!state.trip) return;
   document.getElementById('list-title').textContent=state.trip.name;
-  document.getElementById('list-tripname').textContent='📍 '+(state.trip.dest||state.trip.name);
+  // 目的地顯示在結算按鈕左邊（加回大頭針）
+  var destEl=document.getElementById('list-dest');
+  if(destEl) destEl.textContent=state.trip.dest?('📍 '+state.trip.dest):'';
   var s=new Date(state.trip.start+'T00:00:00'),e=new Date(state.trip.end+'T00:00:00');
   var days=Math.round((e-s)/86400000)+1;
   document.getElementById('list-dates').textContent=state.trip.start+' → '+state.trip.end;
-  document.getElementById('list-day').textContent='共 '+days+' 天';
+  document.getElementById('list-day').textContent='・共 '+days+' 天';
   document.getElementById('list-sub').textContent='共 '+state.expenses.length+' 筆消費';
 
   var container=document.getElementById('expense-list');
@@ -1266,20 +1372,58 @@ function togglePersonDetail(id){
 function getSettlementData(){
   var calc=calcPersonAmounts();
   var totals=calc.totals, paid=calc.paid;
-  var balance={};
-  state.trip.members.forEach(function(m){balance[m.id]=Math.round((paid[m.id]||0)-(totals[m.id]||0));});
-  var creditors=state.trip.members.filter(function(m){return balance[m.id]>0;}).map(function(m){return Object.assign({},m,{amt:balance[m.id]});});
-  var debtors=state.trip.members.filter(function(m){return balance[m.id]<0;}).map(function(m){return Object.assign({},m,{amt:-balance[m.id]});});
+  // 用未取整的浮點數計算 balance，避免各自取整後的累積誤差
+  var totalsFloat=calc.totalsFloat, paidFloat=calc.paidFloat;
+
+  var balanceFloat={};
+  state.trip.members.forEach(function(m){
+    balanceFloat[m.id]=(paidFloat[m.id]||0)-(totalsFloat[m.id]||0);
+  });
+  // 補正：強制讓所有人的 balance 加總為 0（消除浮點誤差）
+  var balanceSum=state.trip.members.reduce(function(s,m){return s+balanceFloat[m.id];},0);
+  // 把誤差加到最大收款人身上
+  var maxCreditor=null;
+  state.trip.members.forEach(function(m){
+    if(!maxCreditor||balanceFloat[m.id]>balanceFloat[maxCreditor.id]) maxCreditor=m;
+  });
+  if(maxCreditor) balanceFloat[maxCreditor.id]-=balanceSum;
+
+  var creditors=state.trip.members
+    .filter(function(m){return balanceFloat[m.id]>0.5;})
+    .map(function(m){return Object.assign({},m,{amt:balanceFloat[m.id]});});
+  var debtors=state.trip.members
+    .filter(function(m){return balanceFloat[m.id]<-0.5;})
+    .map(function(m){return Object.assign({},m,{amt:-balanceFloat[m.id]});});
+
+  // 應收總額（浮點數加總後一次取整）
+  var totalCredit=Math.round(creditors.reduce(function(s,c){return s+c.amt;},0));
+
   var txns=[];
-  var c=creditors.map(function(x){return Object.assign({},x);}),d=debtors.map(function(x){return Object.assign({},x);});
+  var c=creditors.map(function(x){return Object.assign({},x);});
+  var d=debtors.map(function(x){return Object.assign({},x);});
   var ci=0,di=0;
   while(ci<c.length&&di<d.length){
     var pay=Math.min(c[ci].amt,d[di].amt);
-    if(pay>0.5) txns.push({from:d[di].name,to:c[ci].name,amt:Math.round(pay)});
-    c[ci].amt-=pay;d[di].amt-=pay;
-    if(c[ci].amt<0.5)ci++;
-    if(d[di].amt<0.5)di++;
+    if(pay>0.5) txns.push({from:d[di].name,to:c[ci].name,amt:pay});
+    c[ci].amt-=pay; d[di].amt-=pay;
+    if(c[ci].amt<0.5) ci++;
+    if(d[di].amt<0.5) di++;
   }
+
+  // 尾差補正：確保付款清單加總等於應收總額
+  if(txns.length>0){
+    var sumSoFar=0;
+    for(var i=0;i<txns.length-1;i++){
+      txns[i].amt=Math.round(txns[i].amt);
+      sumSoFar+=txns[i].amt;
+    }
+    txns[txns.length-1].amt=totalCredit-sumSoFar;
+  }
+
+  // 顯示用的 balance 取整
+  var balance={};
+  state.trip.members.forEach(function(m){balance[m.id]=Math.round(balanceFloat[m.id]);});
+
   return{balance:balance,txns:txns,totals:totals,paid:paid};
 }
 
@@ -1345,6 +1489,17 @@ function goAdd(){
   document.getElementById('split-verify').innerHTML='';
   document.getElementById('split-hint').textContent='';
   document.getElementById('all-btn-wrap').innerHTML='';
+
+  // 單人旅行：自動選「人數」並勾選全員
+  if(state.trip && state.trip.members.length===1){
+    setTimeout(function(){
+      setSplit('人數');
+      document.querySelectorAll('.split-btn').forEach(function(b){
+        b.classList.toggle('active', b.getAttribute('data-split')==='人數');
+      });
+      checkAll();
+    }, 50);
+  }
 }
 
 function goBack(){state.editingId=null;showScreen('list');renderList();}
@@ -1408,8 +1563,21 @@ function calcPersonAmounts(){
   var totals={},paid={};
   state.trip.members.forEach(function(m){totals[m.id]=0;paid[m.id]=0;});
   state.expenses.forEach(function(exp){
+    // 墊付換算台幣：
+    // 台幣付款或現金付款：直接用 p.amount * fx
+    // 刷卡付款（外幣）：按各人墊付佔總墊付比例分配 twdAmount，避免匯率近似誤差
+    var totalPaid=exp.payers.reduce(function(s,p){return s+p.amount;},0);
+    var isCardForeign=(exp.payment==='刷卡' && exp.currency!=='TWD');
     var fx=(exp.currency==='TWD'?1:exp.rate);
-    exp.payers.forEach(function(p){paid[p.id]=(paid[p.id]||0)+p.amount*fx;});
+    exp.payers.forEach(function(p){
+      var twdPaid;
+      if(isCardForeign && totalPaid!==0){
+        twdPaid=exp.twdAmount*(p.amount/totalPaid);
+      } else {
+        twdPaid=p.amount*fx;
+      }
+      paid[p.id]=(paid[p.id]||0)+twdPaid;
+    });
     var participantIds=getParticipantIds(exp);
     if(participantIds.length===0) return;
     var shares=calcExpenseShares(exp, participantIds);
@@ -1417,12 +1585,13 @@ function calcPersonAmounts(){
       totals[id]=(totals[id]||0)+(shares[id]||0);
     });
   });
-  // 最後統一取整
+  // 最後統一取整（供顯示用）
+  var totalsRounded={}, paidRounded={};
   state.trip.members.forEach(function(m){
-    totals[m.id]=Math.round(totals[m.id]);
-    paid[m.id]=Math.round(paid[m.id]);
+    totalsRounded[m.id]=Math.round(totals[m.id]);
+    paidRounded[m.id]=Math.round(paid[m.id]);
   });
-  return{totals:totals,paid:paid};
+  return{totals:totalsRounded, paid:paidRounded, totalsFloat:totals, paidFloat:paid};
 }
 
 function calcPerPersonCategoryTotals(){
@@ -1576,12 +1745,17 @@ function exportToExcel(){
   sortedExp.forEach(function(exp){
     var dayVal=exp.day===null?'':exp.day;
     var shares=calcSingleExpenseShares(exp);
+    // 匯率顯示：刷卡外幣用twdAmount/amount反推，避免舊資料rate存錯的問題
+    var rateDisplay=exp.rate;
+    if(exp.payment==='刷卡' && exp.currency!=='TWD' && exp.amount!==0){
+      rateDisplay=Math.round(exp.twdAmount/exp.amount*10000)/10000;
+    }
     var row=[dayVal, exp.date, exp.cat, exp.item, exp.currency, exp.payment];
     members.forEach(function(m){
       var payer=exp.payers.find(function(p){return p.id===m.id;});
       row.push((payer&&payer.amount!==0)?payer.amount:'');
     });
-    row.push(exp.amount, exp.rate, Math.round(exp.twdAmount), exp.splitMethod, formatSplitDetail(exp));
+    row.push(exp.amount, rateDisplay, Math.round(exp.twdAmount), exp.splitMethod, formatSplitDetail(exp));
     members.forEach(function(m){row.push(shares[m.id]||0);});
     row.push(exp.note||'');
     expRows.push(row);
@@ -1652,15 +1826,31 @@ function renderTripList(){
     var card=document.createElement('div');
     card.className='trip-card';
 
+    // 旅行名稱列（名稱＋鉛筆編輯）
+    var nameRow=document.createElement('div');
+    nameRow.style.cssText='display:flex;align-items:center;justify-content:space-between;margin-bottom:2px;';
     var name=document.createElement('div');
     name.className='trip-card-name';
+    name.style.marginBottom='0';
     name.textContent=t?t.name:'（未命名旅行）';
-    card.appendChild(name);
+    var editBtn=document.createElement('button');
+    editBtn.style.cssText='background:none;border:none;cursor:pointer;font-size:15px;padding:2px 4px;color:#888;';
+    editBtn.textContent='✏️';
+    editBtn.title='編輯旅行設定';
+    editBtn.addEventListener('click',function(e){
+      e.stopPropagation();
+      switchToTrip(entry.id);
+      goEditTrip();
+    });
+    nameRow.appendChild(name);
+    nameRow.appendChild(editBtn);
+    card.appendChild(nameRow);
 
+    // 目的地（小字，不獨立一列）
     if(t&&t.dest){
       var dest=document.createElement('div');
-      dest.className='trip-card-dest';
-      dest.textContent='📍 '+t.dest;
+      dest.style.cssText='font-size:11px;color:#888;margin-bottom:4px;';
+      dest.textContent='📍 '+t.dest+(t.creator?' ・ 建立人：'+t.creator:'');
       card.appendChild(dest);
     }
 
@@ -1669,13 +1859,62 @@ function renderTripList(){
     meta.textContent=(t&&t.start?t.start+' ～ '+t.end:'日期未設定')+' ・ '+exps.length+' 筆消費';
     card.appendChild(meta);
 
+    // 旅行代碼顯示（有設定同步才顯示）
+    var gistId=getTripGistId(entry.id);
+    if(gistId){
+      var codeRow=document.createElement('div');
+      codeRow.style.cssText='display:flex;align-items:center;gap:6px;margin-top:6px;';
+      var codeLabel=document.createElement('span');
+      codeLabel.style.cssText='font-size:11px;color:#666;';
+      codeLabel.textContent='旅行代碼：';
+      var codeVal=document.createElement('span');
+      codeVal.style.cssText='font-family:monospace;font-size:11px;color:#333;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;';
+      codeVal.textContent=gistId;
+      var copyCodeBtn=document.createElement('button');
+      copyCodeBtn.style.cssText='background:#EEF2FF;border:none;border-radius:5px;padding:2px 8px;font-size:11px;color:#4361C2;cursor:pointer;font-family:inherit;white-space:nowrap;flex-shrink:0;';
+      copyCodeBtn.textContent='複製';
+      copyCodeBtn.addEventListener('click',function(e){
+        e.stopPropagation();
+        navigator.clipboard.writeText(gistId).then(function(){
+          copyCodeBtn.textContent='已複製！';
+          setTimeout(function(){ copyCodeBtn.textContent='複製'; },1500);
+        }).catch(function(){
+          var ta=document.createElement('textarea');
+          ta.value=gistId; document.body.appendChild(ta); ta.select();
+          document.execCommand('copy'); document.body.removeChild(ta);
+          copyCodeBtn.textContent='已複製！';
+          setTimeout(function(){ copyCodeBtn.textContent='複製'; },1500);
+        });
+      });
+      codeRow.appendChild(codeLabel);
+      codeRow.appendChild(codeVal);
+      codeRow.appendChild(copyCodeBtn);
+      card.appendChild(codeRow);
+    }
+
     var footer=document.createElement('div');
     footer.className='trip-card-footer';
 
-    var count=document.createElement('div');
-    count.className='trip-card-count';
-    count.textContent='總花費 NT$ '+totalTwd.toLocaleString();
-    footer.appendChild(count);
+    var syncStatus=document.createElement('div');
+    syncStatus.className='trip-card-count';
+    var hasTripSync=isTripSyncEnabled(entry.id);
+    syncStatus.innerHTML=hasTripSync?
+      '<span style="color:#085041;">☁️ 已啟用同步</span>':
+      '<span style="color:#999;">📵 單機模式</span>';
+    footer.appendChild(syncStatus);
+
+    var rightBtns=document.createElement('div');
+    rightBtns.style.cssText='display:flex;gap:6px;';
+
+    var gistBtn=document.createElement('button');
+    gistBtn.className='trip-card-del';
+    gistBtn.style.color=hasTripSync?'#085041':'#185FA5';
+    gistBtn.textContent=hasTripSync?'☁️ 同步設定':'☁️ 設定旅行代碼';
+    gistBtn.addEventListener('click', function(e){
+      e.stopPropagation();
+      openGistModal(entry.id);
+    });
+    rightBtns.appendChild(gistBtn);
 
     var delBtn=document.createElement('button');
     delBtn.className='trip-card-del';
@@ -1686,8 +1925,9 @@ function renderTripList(){
       if(delBtn.classList.contains('confirming')){
         clearTimeout(delTimers[key]);
         allTrips=allTrips.filter(function(x){return x.id!==entry.id;});
-        // 記錄已刪除的ID，防止下次同步時被重新加回來
         if(deletedTripIds.indexOf(entry.id)===-1) deletedTripIds.push(entry.id);
+        // 清除這趟旅行的 Gist 設定
+        setTripGistId(entry.id, '');
         if(state.currentTripId===entry.id){
           state.trip=null; state.expenses=[]; state.currentTripId=null;
         }
@@ -1702,7 +1942,8 @@ function renderTripList(){
         }, 2500);
       }
     });
-    footer.appendChild(delBtn);
+    rightBtns.appendChild(delBtn);
+    footer.appendChild(rightBtns);
     card.appendChild(footer);
 
     // 點卡片進入該旅行
@@ -1720,6 +1961,73 @@ function renderTripList(){
 document.getElementById('btn-trips-cloud').addEventListener('click', function(){
   initCloudScreen(); showScreen('cloud');
 });
+document.getElementById('btn-import-trip').addEventListener('click', function(){
+  if(!getGlobalToken()){ alert('請先在 ⚙️ 設定頁填入 Token'); return; }
+  document.getElementById('import-gist-id').value='';
+  document.getElementById('import-status').style.display='none';
+  document.getElementById('modal-import').style.display='flex';
+});
+
+document.getElementById('btn-modal-import-cancel').addEventListener('click', function(){
+  document.getElementById('modal-import').style.display='none';
+});
+
+document.getElementById('modal-import').addEventListener('click', function(e){
+  if(e.target===this) document.getElementById('modal-import').style.display='none';
+});
+
+document.getElementById('btn-modal-import').addEventListener('click', async function(){
+  var gistId=document.getElementById('import-gist-id').value.trim();
+  var statusEl=document.getElementById('import-status');
+  if(!gistId){ alert('請填入 Gist ID'); return; }
+
+  // 檢查是否已匯入過（用旅行代碼比對）
+  var existing=allTrips.find(function(t){ return getTripGistId(t.id)===gistId; });
+  if(existing){
+    alert('這個旅行代碼已在你的旅行列表中了（'+(existing.trip&&existing.trip.name||'未命名')+'）');
+    return;
+  }
+
+  this.textContent='讀取中...'; this.disabled=true;
+  statusEl.style.display='block'; statusEl.style.color='#888'; statusEl.textContent='連線中...';
+
+  try{
+    // 用全域 token 讀取指定 Gist（暫時設定 tripGist 讓 gistRead 能讀）
+    var tempId='temp_'+Date.now();
+    setTripGistId(tempId, gistId);
+    var cloudData=await gistRead(tempId);
+    setTripGistId(tempId, ''); // 清除暫時設定
+
+    if(!cloudData||!cloudData.trip){
+      statusEl.style.color='#C0392B';
+      statusEl.textContent='❌ 找不到旅行資料，請確認 Gist ID 是否正確';
+      return;
+    }
+
+    // 建立新的旅行 entry
+    var newId=genTripId();
+    var newEntry={
+      id:newId,
+      trip:cloudData.trip,
+      expenses:cloudData.expenses||[],
+      deletedExpenseIds:cloudData.deletedExpenseIds||[]
+    };
+    allTrips.push(newEntry);
+    setTripGistId(newId, gistId);
+    saveToStorage();
+    renderTripList();
+
+    document.getElementById('modal-import').style.display='none';
+    showToastWithUndo('已匯入「'+(cloudData.trip.name||'旅行')+'」',false);
+
+  }catch(e){
+    statusEl.style.color='#C0392B';
+    statusEl.textContent='❌ 匯入失敗：'+e.message;
+  }finally{
+    this.textContent='讀取並匯入'; this.disabled=false;
+  }
+});
+
 document.getElementById('btn-add-new-trip').addEventListener('click', function(){
   createNewTrip();
   initSetupPage(false);
@@ -1774,7 +2082,7 @@ document.getElementById('fx-twd-c').addEventListener('input', function(){ calcFX
 document.getElementById('fx-rate-c').addEventListener('input', function(){ calcFX('foreign'); });
 
 /* ══════════════════════════════════════════════
-   雲端同步設定（存在 localStorage）
+   雲端設定：全域 token + 每趟旅行獨立 gistId
 ══════════════════════════════════════════════ */
 var CLOUD_KEY='travel_app_cloud_config';
 
@@ -1786,19 +2094,40 @@ function saveCloudConfig(cfg){
   localStorage.setItem(CLOUD_KEY, JSON.stringify(cfg));
 }
 
-function isCloudEnabled(){
+function getGlobalToken(){
+  return loadCloudConfig().token||'';
+}
+
+function getTripGistId(tripId){
   var cfg=loadCloudConfig();
-  return !!(cfg.gistId && cfg.token);
+  return (cfg.tripGists&&cfg.tripGists[tripId])||'';
+}
+
+function setTripGistId(tripId, gistId){
+  var cfg=loadCloudConfig();
+  if(!cfg.tripGists) cfg.tripGists={};
+  if(gistId){ cfg.tripGists[tripId]=gistId; }
+  else { delete cfg.tripGists[tripId]; }
+  saveCloudConfig(cfg);
+}
+
+function isTripSyncEnabled(tripId){
+  return !!(getGlobalToken() && getTripGistId(tripId));
 }
 
 function updateSyncUI(){
-  var enabled=isCloudEnabled();
-  document.getElementById('btn-manual-sync').style.display=enabled?'inline-block':'none';
+  var hasToken=!!getGlobalToken();
+  document.getElementById('btn-manual-sync').style.display=
+    (hasToken && state.currentTripId && getTripGistId(state.currentTripId))?'inline-block':'none';
   var bannerText=document.getElementById('banner-text');
-  if(enabled){
-    bannerText.textContent='雲端同步已啟用・資料同步至 Gist';
+  if(!hasToken){
+    bannerText.textContent='⚠️ 未設定 Token，所有旅行為單機模式';
+  } else if(state.currentTripId && getTripGistId(state.currentTripId)){
+    bannerText.textContent='雲端同步已啟用・此旅行同步至 Gist';
+  } else if(state.currentTripId){
+    bannerText.textContent='此旅行尚未設定 Gist，目前為單機模式';
   } else {
-    bannerText.textContent='⚠️ 未啟用雲端同步，換裝置資料會遺失';
+    bannerText.textContent='Token 已設定・請進入旅行後設定 Gist';
   }
   var cfg=loadCloudConfig();
   var fillBtn=document.getElementById('btn-fill-sheets');
@@ -1815,14 +2144,15 @@ function setSyncStatus(msg, type){
 }
 
 /* ══════════════════════════════════════════════
-   GitHub Gist 讀寫
+   GitHub Gist 讀寫（以 tripId 決定用哪個 Gist）
 ══════════════════════════════════════════════ */
-async function gistRead(){
-  var cfg=loadCloudConfig();
-  if(!cfg.gistId||!cfg.token) return null;
+async function gistRead(tripId){
+  var token=getGlobalToken();
+  var gistId=getTripGistId(tripId||state.currentTripId);
+  if(!token||!gistId) return null;
   try{
-    var resp=await fetch('https://api.github.com/gists/'+cfg.gistId,{
-      headers:{'Authorization':'Bearer '+cfg.token,'Accept':'application/vnd.github+json'}
+    var resp=await fetch('https://api.github.com/gists/'+gistId,{
+      headers:{'Authorization':'Bearer '+token,'Accept':'application/vnd.github+json'}
     });
     if(!resp.ok) throw new Error('HTTP '+resp.status);
     var data=await resp.json();
@@ -1835,13 +2165,14 @@ async function gistRead(){
   }
 }
 
-async function gistWrite(payload){
-  var cfg=loadCloudConfig();
-  if(!cfg.gistId||!cfg.token) return false;
+async function gistWrite(payload, tripId){
+  var token=getGlobalToken();
+  var gistId=getTripGistId(tripId||state.currentTripId);
+  if(!token||!gistId) return false;
   try{
-    var resp=await fetch('https://api.github.com/gists/'+cfg.gistId,{
+    var resp=await fetch('https://api.github.com/gists/'+gistId,{
       method:'PATCH',
-      headers:{'Authorization':'Bearer '+cfg.token,'Accept':'application/vnd.github+json','Content-Type':'application/json'},
+      headers:{'Authorization':'Bearer '+token,'Accept':'application/vnd.github+json','Content-Type':'application/json'},
       body:JSON.stringify({files:{'travel_data.json':{content:JSON.stringify(payload)}}})
     });
     return resp.ok;
@@ -1859,132 +2190,52 @@ async function gistWrite(payload){
    雲端 trip 設定以本機為準
 ══════════════════════════════════════════════ */
 function mergeWithCloud(cloudData){
+  // 新架構下此函式只用於處理舊格式 Gist 資料的一次性匯入
   if(!cloudData) return false;
-  var hasNew=false;
-
-  // 合併雙方的 deletedTripIds
-  var cloudDeleted=cloudData.deletedTripIds||[];
-  cloudDeleted.forEach(function(id){
-    if(deletedTripIds.indexOf(id)===-1) deletedTripIds.push(id);
-  });
-  // 把本機已存在但應該被刪除的旅行清掉
-  var before=allTrips.length;
-  allTrips=allTrips.filter(function(t){ return deletedTripIds.indexOf(t.id)===-1; });
-  if(allTrips.length<before) hasNew=true; // 有東西被清掉，需要更新畫面
-
-  // 支援舊格式雲端資料自動轉換
-  var cloudTrips=cloudData.trips;
-  if(!cloudTrips && cloudData.trip){
-    var oldId=genTripId();
-    cloudTrips=[{id:oldId, trip:cloudData.trip, expenses:cloudData.expenses||[]}];
-  }
-  if(!cloudTrips) return hasNew;
-
-  cloudTrips.forEach(function(ct){
-    // 跳過已刪除的旅行
-    if(deletedTripIds.indexOf(ct.id)!==-1) return;
-
-    // 以 id 比對
-    var local=allTrips.find(function(t){return t.id===ct.id;});
-
-    // 找不到時以「旅行名稱+出發日期」比對，防重複
-    if(!local && ct.trip){
-      local=allTrips.find(function(t){
-        return t.trip &&
-          t.trip.name===ct.trip.name &&
-          t.trip.start===ct.trip.start;
-      });
-      if(local){ ct.id=local.id; }
-    }
-
-    if(!local){
-      // 雲端有、本機沒有的旅行 → 加入（過濾掉已刪除的消費）
-      var filteredExpenses=(ct.expenses||[]).filter(function(ce){
-        return (ct.deletedExpenseIds||[]).indexOf(String(ce.id))===-1;
-      });
-      allTrips.push({id:ct.id, trip:ct.trip, expenses:filteredExpenses, deletedExpenseIds:ct.deletedExpenseIds||[]});
-      hasNew=true;
-    } else {
-      // 旅行設定：以 tripUpdatedAt 較新的為準
-      var localTripTime=(local.trip&&local.trip.tripUpdatedAt)||0;
-      var cloudTripTime=(ct.trip&&ct.trip.tripUpdatedAt)||0;
-      if(cloudTripTime>localTripTime){
-        local.trip=ct.trip;
-        hasNew=true;
-      }
-      // 合併 deletedExpenseIds（取聯集）
-      if(!local.deletedExpenseIds) local.deletedExpenseIds=[];
-      (ct.deletedExpenseIds||[]).forEach(function(did){
-        if(local.deletedExpenseIds.indexOf(did)===-1) local.deletedExpenseIds.push(did);
-      });
-      // 清除本機中應該被刪除的消費
-      local.expenses=local.expenses.filter(function(e){
-        return local.deletedExpenseIds.indexOf(String(e.id))===-1;
-      });
-      // 合併消費：以 expUpdatedAt 判斷新舊
-      var localMap={};
-      local.expenses.forEach(function(e){ localMap[String(e.id)]=e; });
-      (ct.expenses||[]).forEach(function(ce){
-        if(local.deletedExpenseIds.indexOf(String(ce.id))!==-1) return;
-        var existing=localMap[String(ce.id)];
-        if(!existing){
-          local.expenses.push(ce);
-          localMap[String(ce.id)]=ce;
-          hasNew=true;
-        } else {
-          var cloudTime=ce.expUpdatedAt||0;
-          var localTime=existing.expUpdatedAt||0;
-          if(cloudTime>localTime){
-            var idx2=local.expenses.findIndex(function(e){return String(e.id)===String(ce.id);});
-            if(idx2>=0){ local.expenses[idx2]=ce; }
-            localMap[String(ce.id)]=ce;
-            hasNew=true;
-          }
-        }
-      });
-    }
-  });
-
-  if(hasNew && state.currentTripId){
-    var cur=allTrips.find(function(t){return t.id===state.currentTripId;});
-    if(cur){
-      // 依 sortOrder 排序（有 sortOrder 的排前面，沒有的維持原順序）
-      cur.expenses.sort(function(a,b){
-        var sa=a.sortOrder||0, sb=b.sortOrder||0;
-        if(sa && sb) return sa-sb;
-        if(sa) return -1;
-        if(sb) return 1;
-        return 0;
-      });
-      state.trip=cur.trip;
-      state.expenses=cur.expenses;
+  if(cloudData.trips || cloudData.tripId) return false; // 新格式，跳過
+  // 舊格式（含 trip 和 expenses）：轉換成一筆旅行
+  if(cloudData.trip){
+    var exists=allTrips.find(function(t){
+      return t.trip && t.trip.name===cloudData.trip.name && t.trip.start===cloudData.trip.start;
+    });
+    if(!exists){
+      var oldId=genTripId();
+      allTrips.push({id:oldId, trip:cloudData.trip, expenses:cloudData.expenses||[], deletedExpenseIds:[]});
+      return true;
     }
   }
-  return hasNew;
+  return false;
 }
 
-async function syncToCloud(showFeedback){
-  if(!isCloudEnabled()) return;
+
+async function syncToCloud(showFeedback, tripId){
+  var tid=tripId||state.currentTripId;
+  if(!tid||!isTripSyncEnabled(tid)) return;
   if(showFeedback) setSyncStatus('同步中...','ing');
-  if(state.currentTripId){
-    var idx=allTrips.findIndex(function(t){return t.id===state.currentTripId;});
+  // 先把目前 state 存回 allTrips
+  if(state.currentTripId===tid){
+    var idx=allTrips.findIndex(function(t){return t.id===tid;});
     if(idx>=0){ allTrips[idx].trip=state.trip; allTrips[idx].expenses=state.expenses; }
   }
+  var local=allTrips.find(function(t){return t.id===tid;});
+  if(!local) return;
   try{
-    var cloudData=await gistRead();
-    var hasNew=mergeWithCloud(cloudData);
+    var cloudData=await gistRead(tid);
+    var hasNew=mergeSingleTrip(local, cloudData);
+    // 寫入這趟旅行的完整資料到它自己的 Gist
     var payload={
-      trips:allTrips,
-      currentTripId:state.currentTripId,
-      deletedTripIds:deletedTripIds,
+      tripId:tid,
+      trip:local.trip,
+      expenses:local.expenses,
+      deletedExpenseIds:local.deletedExpenseIds||[],
       updatedAt:Date.now()
     };
-    var ok=await gistWrite(payload);
+    var ok=await gistWrite(payload, tid);
     saveToStorage();
     if(showFeedback){
       if(ok){
         setSyncStatus(hasNew?'✓ 已同步（含新資料）':'✓ 同步完成','ok');
-        if(hasNew){ renderTripList(); showToastWithUndo('已同步其他裝置的新資料',false); }
+        if(hasNew && state.currentTripId===tid){ renderList(); showToastWithUndo('已同步其他裝置的新資料',false); }
       } else {
         setSyncStatus('✗ 同步失敗','err');
       }
@@ -1996,11 +2247,63 @@ async function syncToCloud(showFeedback){
   }
 }
 
-// 儲存後自動同步到雲端
+// 單趟旅行的合併邏輯
+function mergeSingleTrip(local, cloudData){
+  if(!cloudData) return false;
+  var hasNew=false;
+
+  // 旅行設定：以 tripUpdatedAt 較新的為準
+  var localTripTime=(local.trip&&local.trip.tripUpdatedAt)||0;
+  var cloudTripTime=(cloudData.trip&&cloudData.trip.tripUpdatedAt)||0;
+  if(cloudTripTime>localTripTime){
+    local.trip=cloudData.trip;
+    hasNew=true;
+  }
+
+  // 合併 deletedExpenseIds
+  if(!local.deletedExpenseIds) local.deletedExpenseIds=[];
+  (cloudData.deletedExpenseIds||[]).forEach(function(did){
+    if(local.deletedExpenseIds.indexOf(did)===-1) local.deletedExpenseIds.push(did);
+  });
+
+  // 清除本機中應被刪除的消費
+  local.expenses=local.expenses.filter(function(e){
+    return local.deletedExpenseIds.indexOf(String(e.id))===-1;
+  });
+
+  // 合併消費明細（以 expUpdatedAt 判斷新舊）
+  var localMap={};
+  local.expenses.forEach(function(e){ localMap[String(e.id)]=e; });
+  (cloudData.expenses||[]).forEach(function(ce){
+    if(local.deletedExpenseIds.indexOf(String(ce.id))!==-1) return;
+    var existing=localMap[String(ce.id)];
+    if(!existing){
+      local.expenses.push(ce);
+      localMap[String(ce.id)]=ce;
+      hasNew=true;
+    } else if((ce.expUpdatedAt||0)>(existing.expUpdatedAt||0)){
+      var idx2=local.expenses.findIndex(function(e){return String(e.id)===String(ce.id);});
+      if(idx2>=0){ local.expenses[idx2]=ce; localMap[String(ce.id)]=ce; }
+      hasNew=true;
+    }
+  });
+
+  // 依 sortOrder 排序
+  local.expenses.sort(function(a,b){
+    var sa=a.sortOrder||0, sb=b.sortOrder||0;
+    if(sa&&sb) return sa-sb;
+    if(sa) return -1;
+    if(sb) return 1;
+    return 0;
+  });
+
+  return hasNew;
+}
+
 function saveToStorageAndSync(){
   saveToStorage();
-  if(isCloudEnabled()){
-    syncToCloud(true);
+  if(state.currentTripId && isTripSyncEnabled(state.currentTripId)){
+    syncToCloud(true, state.currentTripId);
   }
 }
 
@@ -2010,7 +2313,6 @@ function saveToStorageAndSync(){
 ══════════════════════════════════════════════ */
 function initCloudScreen(){
   var cfg=loadCloudConfig();
-  document.getElementById('cloud-gist-id').value=cfg.gistId||'';
   document.getElementById('cloud-token').value=cfg.token||'';
   document.getElementById('cloud-script-url').value=cfg.scriptUrl||'';
 }
@@ -2020,39 +2322,24 @@ document.getElementById('btn-cloud-back').addEventListener('click', function(){
   showScreen('trips');
 });
 
-document.getElementById('btn-save-cloud').addEventListener('click', async function(){
-  var gistId=document.getElementById('cloud-gist-id').value.trim();
+document.getElementById('btn-save-global-token').addEventListener('click', function(){
   var token=document.getElementById('cloud-token').value.trim();
-  if(!gistId||!token){ alert('請填入 Gist ID 和 Token'); return; }
+  if(!token){ alert('請填入 Token'); return; }
   var cfg=loadCloudConfig();
-  cfg.gistId=gistId; cfg.token=token;
+  cfg.token=token;
   saveCloudConfig(cfg);
   updateSyncUI();
-  this.textContent='設定中...'; this.disabled=true;
-  setSyncStatus('連線中...','ing');
-  var cloudData=await gistRead();
-  if(cloudData===null && allTrips.length===0){
-    setSyncStatus('✓ 連線成功','ok');
-  } else {
-    var hasNew=mergeWithCloud(cloudData);
-    if(hasNew){ saveToStorage(); renderTripList(); }
-    var payload={trips:allTrips, currentTripId:state.currentTripId, deletedTripIds:deletedTripIds, updatedAt:Date.now()};
-    var ok=await gistWrite(payload);
-    setSyncStatus(ok?'✓ 同步成功':'✗ 同步失敗',ok?'ok':'err');
-    if(hasNew) showToastWithUndo('已從雲端載入 '+allTrips.length+' 趟旅行資料',false);
-  }
-  this.textContent='儲存設定並立即同步'; this.disabled=false;
+  showToastWithUndo('Token 已儲存',false);
 });
 
 document.getElementById('btn-clear-cloud').addEventListener('click', function(){
-  if(!confirm('確定要清除雲端設定嗎？本機資料不受影響，只是停用同步功能。')) return;
+  if(!confirm('確定要清除 Token 嗎？所有旅行都會停止雲端同步，本機資料不受影響。')) return;
   var cfg=loadCloudConfig();
-  delete cfg.gistId; delete cfg.token;
+  delete cfg.token;
   saveCloudConfig(cfg);
-  document.getElementById('cloud-gist-id').value='';
   document.getElementById('cloud-token').value='';
   updateSyncUI();
-  alert('已清除雲端設定，改回本機模式');
+  alert('已清除 Token，所有旅行改回單機模式');
 });
 
 document.getElementById('btn-save-script').addEventListener('click', function(){
@@ -2066,6 +2353,63 @@ document.getElementById('btn-save-script').addEventListener('click', function(){
 
 document.getElementById('btn-manual-sync').addEventListener('click', function(){
   syncToCloud(true);
+});
+
+// ── Gist 設定 Modal ──────────────────────────
+var modalTripId=null;
+
+function openGistModal(tripId){
+  modalTripId=tripId;
+  var entry=allTrips.find(function(t){return t.id===tripId;});
+  var tripName=(entry&&entry.trip&&entry.trip.name)||'這趟旅行';
+  document.getElementById('modal-gist-title').textContent='設定「'+tripName+'」的 Gist';
+  document.getElementById('modal-gist-id').value=getTripGistId(tripId)||'';
+  var modal=document.getElementById('modal-gist');
+  modal.style.display='flex';
+}
+
+function closeGistModal(){
+  document.getElementById('modal-gist').style.display='none';
+  modalTripId=null;
+}
+
+document.getElementById('btn-modal-cancel').addEventListener('click', closeGistModal);
+document.getElementById('modal-gist').addEventListener('click', function(e){
+  if(e.target===this) closeGistModal();
+});
+
+document.getElementById('btn-modal-save-gist').addEventListener('click', async function(){
+  if(!modalTripId) return;
+  var gistId=document.getElementById('modal-gist-id').value.trim();
+  if(!gistId){ alert('請填入旅行代碼'); return; }
+  if(!getGlobalToken()){ alert('請先在設定頁填入 Token'); closeGistModal(); return; }
+  // 防呆：檢查是否已被其他旅行使用
+  var conflict=allTrips.find(function(t){
+    return t.id!==modalTripId && getTripGistId(t.id)===gistId;
+  });
+  if(conflict){
+    alert('這個旅行代碼已被「'+(conflict.trip&&conflict.trip.name||'另一趟旅行')+'」使用中，請使用不同的旅行代碼。');
+    return;
+  }
+  setTripGistId(modalTripId, gistId);
+  updateSyncUI();
+  closeGistModal();
+  renderTripList();
+  // 立即同步這趟旅行
+  setSyncStatus('連線中...','ing');
+  var ok=await syncToCloud(false, modalTripId);
+  setSyncStatus(ok?'✓ 同步成功':'✗ 同步失敗',ok?'ok':'err');
+  if(ok) showToastWithUndo('Gist 設定完成，已同步',false);
+});
+
+document.getElementById('btn-modal-clear-gist').addEventListener('click', function(){
+  if(!modalTripId) return;
+  if(!confirm('確定要清除這趟旅行的 Gist 設定嗎？本機資料不受影響，只是停用這趟旅行的同步。')) return;
+  setTripGistId(modalTripId, '');
+  updateSyncUI();
+  closeGistModal();
+  renderTripList();
+  showToastWithUndo('已清除 Gist 設定，改回單機模式',false);
 });
 
 /* ══════════════════════════════════════════════
@@ -2257,18 +2601,26 @@ updateSyncUI();
 initCloudScreen();
 
 async function initApp(){
-  if(isCloudEnabled()){
-    setSyncStatus('載入中...','ing');
-    var cloudData=await gistRead();
-    if(cloudData){
-      var hasNew=mergeWithCloud(cloudData);
-      if(hasNew){ saveToStorage(); }
+  if(getGlobalToken()){
+    // 對所有已設定 Gist 的旅行各自同步
+    var syncTasks=allTrips.filter(function(t){
+      return isTripSyncEnabled(t.id);
+    });
+    if(syncTasks.length>0){
+      setSyncStatus('同步中...','ing');
+      var anyNew=false;
+      for(var i=0;i<syncTasks.length;i++){
+        var t=syncTasks[i];
+        var cloudData=await gistRead(t.id);
+        if(cloudData){
+          var hasNew=mergeSingleTrip(t, cloudData);
+          if(hasNew) anyNew=true;
+        }
+      }
+      if(anyNew){ saveToStorage(); }
       setSyncStatus('✓ 已同步雲端資料','ok');
-    } else {
-      setSyncStatus(allTrips.length>0?'⚠ 雲端連線失敗，使用本機資料':'⚠ 雲端連線失敗','err');
     }
   }
-  // 永遠顯示旅行列表頁
   renderTripList();
   showScreen('trips');
 }
