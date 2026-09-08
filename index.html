@@ -2151,8 +2151,9 @@ async function gistRead(tripId){
   var gistId=getTripGistId(tripId||state.currentTripId);
   if(!token||!gistId) return null;
   try{
-    var resp=await fetch('https://api.github.com/gists/'+gistId,{
-      headers:{'Authorization':'Bearer '+token,'Accept':'application/vnd.github+json'}
+    var resp=await fetch('https://api.github.com/gists/'+gistId+'?_ts='+Date.now(),{
+      cache:'no-store',
+      headers:{'Authorization':'Bearer '+token,'Accept':'application/vnd.github+json','Cache-Control':'no-cache'}
     });
     if(!resp.ok) throw new Error('HTTP '+resp.status);
     var data=await resp.json();
@@ -2172,6 +2173,7 @@ async function gistWrite(payload, tripId){
   try{
     var resp=await fetch('https://api.github.com/gists/'+gistId,{
       method:'PATCH',
+      cache:'no-store',
       headers:{'Authorization':'Bearer '+token,'Accept':'application/vnd.github+json','Content-Type':'application/json'},
       body:JSON.stringify({files:{'travel_data.json':{content:JSON.stringify(payload)}}})
     });
