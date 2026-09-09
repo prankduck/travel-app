@@ -2000,7 +2000,7 @@ document.getElementById('btn-modal-import').addEventListener('click', async func
 
     if(!cloudData||!cloudData.trip){
       statusEl.style.color='#C0392B';
-      statusEl.textContent='❌ 找不到旅行資料，請確認 Gist ID 是否正確';
+      statusEl.textContent='❌ 讀取失敗：'+(window.gistLastError||'找不到旅行資料，請確認 Gist ID 是否正確');
       return;
     }
 
@@ -2149,18 +2149,27 @@ function setSyncStatus(msg, type){
 async function gistRead(tripId){
   var token=getGlobalToken();
   var gistId=getTripGistId(tripId||state.currentTripId);
-  if(!token||!gistId) return null;
+  window.gistLastError='';
+  if(!token){ window.gistLastError='尚未設定 Token'; return null; }
+  if(!gistId){ window.gistLastError='尚未設定 Gist ID'; return null; }
   try{
     var resp=await fetch('https://api.github.com/gists/'+gistId+'?_ts='+Date.now(),{
       cache:'no-store',
       headers:{'Authorization':'Bearer '+token,'Accept':'application/vnd.github+json','Cache-Control':'no-cache'}
     });
-    if(!resp.ok) throw new Error('HTTP '+resp.status);
+    if(!resp.ok){
+      if(resp.status===404) window.gistLastError='Gist ID 不存在或無法存取（404）';
+      else if(resp.status===401) window.gistLastError='Token 無效或已過期（401）';
+      else if(resp.status===403) window.gistLastError='沒有權限或已達 API 速率限制（403）';
+      else window.gistLastError='HTTP '+resp.status;
+      throw new Error(window.gistLastError);
+    }
     var data=await resp.json();
     var file=data.files['travel_data.json'];
-    if(!file||!file.content) return null;
+    if(!file||!file.content){ window.gistLastError='Gist 內找不到 travel_data.json 檔案'; return null; }
     return JSON.parse(file.content);
   }catch(e){
+    if(!window.gistLastError) window.gistLastError=e.message||'網路連線失敗';
     console.error('Gist 讀取失敗',e);
     return null;
   }
