@@ -2155,7 +2155,7 @@ async function gistRead(tripId){
   try{
     var resp=await fetch('https://api.github.com/gists/'+gistId+'?_ts='+Date.now(),{
       cache:'no-store',
-      headers:{'Authorization':'Bearer '+token,'Accept':'application/vnd.github+json','Cache-Control':'no-cache'}
+      headers:{'Authorization':'Bearer '+token,'Accept':'application/vnd.github+json'}
     });
     if(!resp.ok){
       if(resp.status===404) window.gistLastError='Gist ID 不存在或無法存取（404）';
