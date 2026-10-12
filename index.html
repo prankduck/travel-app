@@ -4,7 +4,6 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>旅遊記帳分帳 APP</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;}
 html,body{height:100%;}
@@ -58,6 +57,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica N
 .mini-order{display:flex;gap:3px;}
 .mini-order-btn{width:20px;height:18px;border:.5px solid #ddd;border-radius:4px;background:#f9f9f9;font-size:11px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#666;padding:0;}
 .mini-order-btn:disabled{opacity:.25;cursor:default;}
+.incomplete-notice{margin:10px 12px 0;padding:8px 12px;background:#FFF4E0;border:.5px solid #E8B85C;border-radius:8px;color:#7A4B00;font-size:13px;}
+.tag-incomplete{display:inline-block;margin-top:3px;padding:1px 7px;border-radius:9px;background:#FFE2B3;color:#7A3F00;font-size:11px;font-weight:600;}
 .fab{position:fixed;bottom:68px;right:16px;width:52px;height:52px;border-radius:50%;background:#185FA5;border:none;color:#fff;font-size:26px;cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:15;box-shadow:0 2px 8px rgba(24,95,165,.3);}
 .summary-row{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:.5px solid #e5e5e5;}
 .summary-row:last-child{border-bottom:none;}
@@ -236,7 +237,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica N
   </div>
 </div>
 
-<div id="screen-setup" class="screen active">
+<div id="screen-setup" class="screen">
   <div class="topbar">
     <div class="topbar-row">
       <button class="btn-back" id="btn-cancel-edit-trip">← 返回</button>
@@ -970,30 +971,6 @@ function saveExpense(){
   var totalForeign=getTotalPaid();
   if(totalForeign===0){missing.push('墊付金額');markInvalid('f-payer-rows');}
 
-  if(currency!=='TWD'){
-    if(payment==='現金'){
-      var rate=parseFloat(document.getElementById('a-rate').value)||0;
-      if(rate<=0){missing.push('匯率');markInvalid('f-a-rate');}
-    } else {
-      var twdAmt=parseFloat(document.getElementById('a-twd-amount').value)||0;
-      if(twdAmt===0){missing.push('實際刷卡台幣金額');markInvalid('f-a-twd-amount');}
-    }
-  }
-
-  if(!state.currentSplit){
-    missing.push('拆帳方式');
-    document.querySelectorAll('.split-btn').forEach(function(b){b.classList.add('invalid');});
-  } else {
-    if(state.currentSplit==='人數'){
-      var anyChecked=state.trip.members.some(function(m){var el=document.getElementById('sp-'+m.id);return el&&el.checked;});
-      if(!anyChecked) missing.push('拆帳參與人員');
-    }
-    if(state.currentSplit==='差額'){
-      var anyChecked2=state.trip.members.some(function(m){var el=document.getElementById('sp-chk-'+m.id);return el&&el.checked;});
-      if(!anyChecked2) missing.push('拆帳參與人員');
-    }
-  }
-
   if(missing.length>0){
     document.getElementById('add-save-warning').classList.add('show');
     alert(missing.join('、')+' 項需填寫');
@@ -1009,6 +986,10 @@ function saveExpense(){
     var twdAmt2=parseFloat(document.getElementById('a-twd-amount').value)||0;
     twdAmount=twdAmt2;
     rate2=totalForeign!==0?Math.round(twdAmt2/totalForeign*10000)/10000:1;
+  }
+  if(currency!=='TWD'){
+    if(payment==='現金'&&!(rate2>0)){ rate2=null; twdAmount=null; }
+    else if(payment!=='現金'&&!twdAmount){ rate2=null; twdAmount=null; }
   }
   var payers=state.trip.members.map(function(m){
     var el=document.getElementById('pamt-'+m.id);
@@ -1046,6 +1027,7 @@ function saveExpense(){
       state.expenses[idx]=Object.assign({},old,{date:date,day:day,cat:cat,item:item,currency:currency,amount:totalForeign,rate:rate2,twdAmount:twdAmount,payment:payment,payers:payers,splitMethod:state.currentSplit,splitData:splitData,note:note,expUpdatedAt:Date.now()});
     }
   } else {
+    listScrollY=0;
     state.expenses.push({id:Date.now()+Math.floor(Math.random()*1000),date:date,day:day,cat:cat,item:item,currency:currency,amount:totalForeign,rate:rate2,twdAmount:twdAmount,payment:payment,payers:payers,splitMethod:state.currentSplit,splitData:splitData,note:note,expUpdatedAt:Date.now()});
   }
   state.editingId=null;
@@ -1057,8 +1039,10 @@ function saveExpense(){
 function editExpense(id){
   var exp=state.expenses.find(function(e){return e.id===id;});
   if(!exp) return;
+  listScrollY=window.scrollY;
   state.editingId=id;
   showScreen('add');
+  window.scrollTo(0,0);
   clearInvalid();
   document.getElementById('add-title').textContent='編輯消費';
   document.getElementById('btn-delete-from-edit').style.display='block';
@@ -1078,12 +1062,13 @@ function editExpense(id){
   renderPayerRows();
   exp.payers.forEach(function(p){var el=document.getElementById('pamt-'+p.id);if(el)el.value=p.amount;});
   updatePayerTotal();
+  document.getElementById('a-rate').value='';document.getElementById('a-twd-amount').value='';
   if(exp.currency!=='TWD'){
-    if(exp.payment==='現金')document.getElementById('a-rate').value=exp.rate;
-    else document.getElementById('a-twd-amount').value=Math.round(exp.twdAmount);
+    if(exp.payment==='現金'){ if(exp.rate) document.getElementById('a-rate').value=exp.rate; }
+    else if(exp.twdAmount) document.getElementById('a-twd-amount').value=Math.round(exp.twdAmount);
     calcConversion();
   }
-  setSplit(exp.splitMethod);
+  if(exp.splitMethod) setSplit(exp.splitMethod); else resetSplitUI();
   state.trip.members.forEach(function(m){
     if(exp.splitMethod==='人數'){
       var el=document.getElementById('sp-'+m.id);
@@ -1170,6 +1155,7 @@ function deleteCurrentEditingExpense(btnEl){
     saveToStorageAndSync();
     showScreen('list');
     renderList();
+    window.scrollTo(0,listScrollY);
     showToastWithUndo('已刪除「'+removed.item+'」', true);
   });
 }
@@ -1184,6 +1170,8 @@ function assignSortOrders(){
 }
 
 function moveExpense(id, dir){
+  var el0=document.querySelector('#expense-list [data-id="'+id+'"]');
+  var top0=el0?el0.getBoundingClientRect().top:null;
   var numId = Number(id);
   var idx = state.expenses.findIndex(function(e){ return Number(e.id) === numId; });
   if(idx < 0) return;
@@ -1196,9 +1184,16 @@ function moveExpense(id, dir){
   clearUndoBuffer();
   saveToStorageAndSync();
   renderList();
+  var el1=document.querySelector('#expense-list [data-id="'+id+'"]');
+  if(el1&&top0!==null) window.scrollBy(0, el1.getBoundingClientRect().top-top0);
 }
 
 function renderList(){
+  var y0=window.scrollY;
+  renderListCore();
+  if(document.getElementById('screen-list').classList.contains('active')) window.scrollTo(0,y0);
+}
+function renderListCore(){
   if(!state.trip) return;
   document.getElementById('list-title').textContent=state.trip.name;
   // 目的地顯示在結算按鈕左邊（加回大頭針）
@@ -1224,8 +1219,8 @@ function renderList(){
     var bg=CAT_COLORS[exp.cat]||'#F1EFE8';
     var tc=CAT_TEXT[exp.cat]||'#2C2C2A';
     var amtStr=exp.currency==='TWD' ? ('NT$ '+Math.round(exp.twdAmount).toLocaleString()) : (exp.currency+' '+exp.amount.toLocaleString());
-    var twdStr=exp.currency!=='TWD' ? ('≈ NT$ '+Math.round(exp.twdAmount).toLocaleString()) : '';
-    var metaStr=formatDateSlash(exp.date)+'・'+exp.payment+'・'+exp.splitMethod+'拆帳';
+    var twdStr=(exp.currency!=='TWD'&&exp.twdAmount) ? ('≈ NT$ '+Math.round(exp.twdAmount).toLocaleString()) : '';
+    var metaStr=formatDateSlash(exp.date)+'・'+exp.payment+'・'+(exp.splitMethod?exp.splitMethod+'拆帳':'尚未拆帳');
     var canUp=displayIdx>0;
     var canDown=displayIdx<displayOrder.length-1;
 
@@ -1250,6 +1245,12 @@ function renderList(){
     metaDiv.textContent=metaStr;
     info.appendChild(nameDiv);
     info.appendChild(metaDiv);
+    var miss=missingInfo(exp);
+    if(miss.length){
+      var tgDiv=document.createElement('div'), tg=document.createElement('span');
+      tg.className='tag-incomplete'; tg.textContent='⚠ 待補：'+miss.join('、');
+      tgDiv.appendChild(tg); info.appendChild(tgDiv);
+    }
     info.addEventListener('click', function(){ editExpense(exp.id); });
     item.appendChild(info);
 
@@ -1331,16 +1332,17 @@ function renderList(){
 
 function renderStats(){
   if(!state.trip) return;
-  var total=Math.round(state.expenses.reduce(function(s,e){return s+e.twdAmount;},0));
+  setIncompleteNotice('screen-stats');
+  var total=Math.round(completeExpenses().reduce(function(s,e){return s+e.twdAmount;},0));
   var calc=calcPersonAmounts();
   var totals=calc.totals;
   document.getElementById('stat-grid').innerHTML=
-    '<div class="stat-card"><div class="stat-label">總花費</div><div class="stat-val">NT$ '+total.toLocaleString()+'</div><div style="font-size:11px;color:#666;margin-top:2px;">'+state.expenses.length+' 筆消費</div></div>'+
+    '<div class="stat-card"><div class="stat-label">總花費</div><div class="stat-val">NT$ '+total.toLocaleString()+'</div><div style="font-size:11px;color:#666;margin-top:2px;">'+completeExpenses().length+' 筆消費</div></div>'+
     '<div class="stat-card"><div class="stat-label">平均每人</div><div class="stat-val">NT$ '+(state.trip.members.length>0?Math.round(total/state.trip.members.length).toLocaleString():0)+'</div><div style="font-size:11px;color:#666;margin-top:2px;">'+state.trip.members.length+' 位成員</div></div>';
 
   var cats=['食','衣','住','行','娛','禮','雜','代'];
   var catTotals={};cats.forEach(function(c){catTotals[c]=0;});
-  state.expenses.forEach(function(e){catTotals[e.cat]=(catTotals[e.cat]||0)+e.twdAmount;});
+  completeExpenses().forEach(function(e){catTotals[e.cat]=(catTotals[e.cat]||0)+e.twdAmount;});
   cats.forEach(function(c){catTotals[c]=Math.round(catTotals[c]);});
 
   document.getElementById('cat-breakdown').innerHTML=cats.filter(function(c){return catTotals[c]!==0;}).map(function(c){
@@ -1429,6 +1431,7 @@ function getSettlementData(){
 
 function renderSettle(){
   if(!state.trip) return;
+  setIncompleteNotice('screen-settle');
   var data=getSettlementData();
   document.getElementById('balance-section').innerHTML='<div class="section-label">每人支出狀態（台幣）</div>'+
     state.trip.members.map(function(m){
@@ -1460,8 +1463,10 @@ function calcFX(type){
 
 function goAdd(){
   if(!state.trip){alert('請先完成旅行設定');return;}
+  listScrollY=window.scrollY;
   state.editingId=null;
   showScreen('add');
+  window.scrollTo(0,0);
   clearInvalid();
   document.getElementById('add-title').textContent='新增消費';
   document.getElementById('btn-delete-from-edit').style.display='none';
@@ -1502,9 +1507,12 @@ function goAdd(){
   }
 }
 
-function goBack(){state.editingId=null;showScreen('list');renderList();}
+var listScrollY=0;
+function goBack(){state.editingId=null;showScreen('list');renderList();window.scrollTo(0,listScrollY);}
 
+var VIEW_KEY='travel_app_last_view';
 function showScreen(name){
+  try{ localStorage.setItem(VIEW_KEY,(state.currentTripId&&['list','add','stats','settle','fx'].indexOf(name)>-1)?'trip':'trips'); }catch(e){}
   document.querySelectorAll('.screen').forEach(function(s){s.classList.remove('active');});
   document.getElementById('screen-'+name).classList.add('active');
 }
@@ -1523,6 +1531,46 @@ function showTab(name){
    calcExpenseShares 回傳的是精確浮點數分攤值
    加總多筆後才做最後一次 Math.round 呈現給使用者
 ────────────────────────────────────────────────── */
+function missingInfo(exp){
+  var m=[];
+  if(exp.currency!=='TWD'){
+    if(exp.payment==='現金'){ if(!(exp.rate>0)) m.push('匯率'); }
+    else if(!exp.twdAmount) m.push('刷卡台幣金額');
+  }
+  if(!exp.splitMethod||getParticipantIds(exp).length===0) m.push('拆帳');
+  return m;
+}
+function isExpenseComplete(exp){ return missingInfo(exp).length===0; }
+function completeExpenses(){ return state.expenses.filter(isExpenseComplete); }
+function countIncomplete(){ return state.expenses.length-completeExpenses().length; }
+function withCompleteOnly(fn){
+  var all=state.expenses; state.expenses=completeExpenses();
+  try{ return fn(); } finally{ state.expenses=all; }
+}
+function confirmIncomplete(action){
+  var n=countIncomplete();
+  return n===0||confirm('有 '+n+' 筆待補資料不會'+action+'，要繼續嗎？');
+}
+function setIncompleteNotice(screenId){
+  var scr=document.getElementById(screenId);
+  var el=scr.querySelector('.incomplete-notice');
+  if(!el){
+    el=document.createElement('div'); el.className='incomplete-notice';
+    var tb=scr.querySelector('.topbar');
+    if(tb) tb.parentNode.insertBefore(el,tb.nextSibling); else scr.insertBefore(el,scr.firstChild);
+  }
+  var n=countIncomplete();
+  el.style.display=n?'block':'none';
+  el.textContent='⚠ 有 '+n+' 筆待補資料，未納入計算';
+}
+function resetSplitUI(){
+  state.currentSplit=null;
+  document.querySelectorAll('.split-btn').forEach(function(b){b.classList.remove('active');});
+  document.getElementById('split-content').style.display='none';
+  ['person-split','split-verify','all-btn-wrap'].forEach(function(i){document.getElementById(i).innerHTML='';});
+  document.getElementById('split-hint').textContent='';
+}
+
 function calcExpenseShares(exp, participantIds){
   var twd=exp.twdAmount, method=exp.splitMethod, data=exp.splitData;
   var fx=(exp.currency==='TWD'?1:exp.rate);
@@ -1562,7 +1610,7 @@ function calcPersonAmounts(){
   // 計算每人「累計墊付」和「累計應分攤」，全程用浮點數加總，最後才取整
   var totals={},paid={};
   state.trip.members.forEach(function(m){totals[m.id]=0;paid[m.id]=0;});
-  state.expenses.forEach(function(exp){
+  completeExpenses().forEach(function(exp){
     // 墊付換算台幣：
     // 台幣付款或現金付款：直接用 p.amount * fx
     // 刷卡付款（外幣）：按各人墊付佔總墊付比例分配 twdAmount，避免匯率近似誤差
@@ -1598,7 +1646,7 @@ function calcPerPersonCategoryTotals(){
   var cats=['食','衣','住','行','娛','禮','雜','代'];
   var perPC={};
   state.trip.members.forEach(function(m){perPC[m.id]={};cats.forEach(function(c){perPC[m.id][c]=0;});});
-  state.expenses.forEach(function(exp){
+  completeExpenses().forEach(function(exp){
     var c=exp.cat;
     var participantIds=getParticipantIds(exp);
     if(participantIds.length===0) return;
@@ -1659,6 +1707,17 @@ function formatSplitDetail(exp){
 }
 
 function exportToExcel(){
+  if(!state.trip){ alert('請先完成旅行設定並新增消費紀錄'); return; }
+  if(!confirmIncomplete('匯出')) return;
+  var run=function(){ withCompleteOnly(exportToExcelCore); };
+  if(window.XLSX){ run(); return; }
+  var sc=document.createElement('script');
+  sc.src='https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+  sc.onload=run;
+  sc.onerror=function(){ alert('Excel 模組載入失敗，請確認網路連線後再試'); };
+  document.head.appendChild(sc);
+}
+function exportToExcelCore(){
   if(!state.trip){
     alert('請先完成旅行設定並新增消費紀錄');
     return;
@@ -2560,12 +2619,13 @@ function buildSheetsPayload(sheetName){
 }
 
 document.getElementById('btn-fill-sheets').addEventListener('click', async function(){
-  if(!state.trip||state.expenses.length===0){ alert('尚無記帳資料可回填'); return; }
+  if(!state.trip||completeExpenses().length===0){ alert('尚無完整的記帳資料可回填'); return; }
+  if(!confirmIncomplete('回填')) return;
   var cfg=loadCloudConfig();
   if(!cfg.scriptUrl){ alert('請先在設定頁填入 Apps Script 網址'); return; }
   var sheetName=prompt('請輸入要回填的工作表名稱\n（例如：2025年7月日本）');
   if(!sheetName||!sheetName.trim()) return;
-  var payload=buildSheetsPayload(sheetName.trim());
+  var payload=withCompleteOnly(function(){ return buildSheetsPayload(sheetName.trim()); });
   if(!payload) return;
   this.disabled=true; this.textContent='回填中...';
   try{
@@ -2611,31 +2671,31 @@ if(saved){
 updateSyncUI();
 initCloudScreen();
 
-async function initApp(){
-  if(getGlobalToken()){
-    // 對所有已設定 Gist 的旅行各自同步
-    var syncTasks=allTrips.filter(function(t){
-      return isTripSyncEnabled(t.id);
-    });
-    if(syncTasks.length>0){
-      setSyncStatus('同步中...','ing');
-      var anyNew=false;
-      for(var i=0;i<syncTasks.length;i++){
-        var t=syncTasks[i];
-        var cloudData=await gistRead(t.id);
-        if(cloudData){
-          var hasNew=mergeSingleTrip(t, cloudData);
-          if(hasNew) anyNew=true;
-        }
-      }
-      if(anyNew){ saveToStorage(); }
-      setSyncStatus('✓ 已同步雲端資料','ok');
-    }
-  }
-  renderTripList();
-  showScreen('trips');
+var bgSyncing=false;
+async function syncAllTrips(){
+  if(bgSyncing||!getGlobalToken()) return;
+  var tasks=allTrips.filter(function(t){return isTripSyncEnabled(t.id);});
+  if(!tasks.length) return;
+  bgSyncing=true; setSyncStatus('同步中...','ing');
+  try{
+    var res=await Promise.all(tasks.map(function(t){return gistRead(t.id);}));
+    var anyNew=false;
+    tasks.forEach(function(t,i){ if(res[i]&&mergeSingleTrip(t,res[i])) anyNew=true; });
+    if(anyNew) saveToStorage();
+    setSyncStatus('✓ 已同步雲端資料','ok');
+    var sc=document.querySelector('.screen.active');
+    if(anyNew&&sc&&sc.id==='screen-trips') renderTripList();
+  }catch(e){ setSyncStatus('✗ 同步失敗','err'); }
+  bgSyncing=false;
 }
-initApp();
+function launchApp(){
+  var wantTrip=false;
+  try{ wantTrip=(localStorage.getItem(VIEW_KEY)==='trip'); }catch(e){}
+  if(wantTrip&&state.currentTripId&&state.trip){ showTab('list'); }
+  else { renderTripList(); showScreen('trips'); }
+  syncAllTrips();
+}
+launchApp();
 
 })();
 </script>
