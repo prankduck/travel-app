@@ -1574,6 +1574,8 @@ function resetSplitUI(){
 function calcExpenseShares(exp, participantIds){
   var twd=exp.twdAmount, method=exp.splitMethod, data=exp.splitData;
   var fx=(exp.currency==='TWD'?1:exp.rate);
+  // 刷卡外幣：用實際刷卡台幣金額反推精確匯率（存檔的匯率只有4位小數，印尼盾這類小匯率誤差很大）
+  if(exp.currency!=='TWD'&&exp.payment==='刷卡'&&exp.amount) fx=twd/exp.amount;
   var shares={};
   participantIds.forEach(function(id){ shares[id]=0; });
   if(method==='人數'){
